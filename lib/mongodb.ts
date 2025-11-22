@@ -1,15 +1,15 @@
 
 import { MongoClient, Db } from "mongodb";
 
-const uri = process.env.MONGODB_URI;
+const uri = process.env.MONGODB_URI as string;
 const dbName = process.env.MONGODB_DB;
 
 if (!uri) {
-  throw new Error("Please define MONGODB_URI in .env.local");
+  throw new Error("Please define MONGODB_URI");
 }
 
 if (!dbName) {
-  throw new Error("Please define MONGODB_DB in .env.local");
+  throw new Error("Please define MONGODB_DB");
 }
 
 let cachedClient: MongoClient | null = null;
