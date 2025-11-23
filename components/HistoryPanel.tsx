@@ -38,6 +38,7 @@ export default function HistoryPanel({ onSelect, refreshKey }: Props) {
   const [languageFilter, setLanguageFilter] = useState<LanguageFilter>("all");
   const [isLoading, setIsLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingFavoriteId, setTogglingFavoriteId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -75,12 +76,9 @@ export default function HistoryPanel({ onSelect, refreshKey }: Props) {
   } as const;
 
   const filteredItems = items.filter((item) => {
-    // language filter
     if (languageFilter !== "all" && item.language !== languageFilter) {
       return false;
     }
-
-    // text search filter
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -89,7 +87,6 @@ export default function HistoryPanel({ onSelect, refreshKey }: Props) {
     );
   });
 
-  // Delete a history item
   const handleDelete = async (
     e: MouseEvent<HTMLButtonElement>,
     id: string
@@ -116,9 +113,44 @@ export default function HistoryPanel({ onSelect, refreshKey }: Props) {
     }
   };
 
+  const handleToggleFavorite = async (
+    e: MouseEvent<HTMLButtonElement>,
+    item: HistoryItem
+  ) => {
+    e.stopPropagation();
+    if (!item.id) return;
+
+    const nextValue = !item.isFavorite;
+
+    try {
+      setTogglingFavoriteId(item.id);
+      const res = await fetch(`/api/history/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isFavorite: nextValue })
+      });
+
+      if (!res.ok) {
+        console.error("Failed to update favorite");
+        return;
+      }
+
+      const updated: HistoryItem = await res.json();
+
+      setItems((prev) =>
+        prev.map((h) =>
+          h.id === updated.id ? { ...h, isFavorite: updated.isFavorite } : h
+        )
+      );
+    } catch (err) {
+      console.error("Error updating favorite:", err);
+    } finally {
+      setTogglingFavoriteId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full gap-4">
-      {/* Header */}
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-10 rounded-xl blur-xl"></div>
         <div className="relative bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 rounded-xl border border-slate-300 dark:border-slate-700/50 shadow-xl p-4">
@@ -133,7 +165,6 @@ export default function HistoryPanel({ onSelect, refreshKey }: Props) {
             )}
           </div>
 
-          {/* Search */}
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-lg blur opacity-50"></div>
             <div className="relative flex items-center">
@@ -182,7 +213,6 @@ export default function HistoryPanel({ onSelect, refreshKey }: Props) {
             </div>
           </div>
 
-          {/* ✅ Language Filter Pills */}
           <div className="mt-3 flex flex-wrap gap-2">
             {(
               [
@@ -211,7 +241,6 @@ export default function HistoryPanel({ onSelect, refreshKey }: Props) {
         </div>
       </div>
 
-      {/* List */}
       <div className="flex-1 overflow-auto relative">
         <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 via-transparent to-purple-500/5 rounded-xl pointer-events-none"></div>
 
@@ -274,6 +303,28 @@ export default function HistoryPanel({ onSelect, refreshKey }: Props) {
 
                       <div className="flex items-center gap-2">
                         <button
+                          onClick={(e) => handleToggleFavorite(e, item)}
+                          className="text-slate-400 dark:text-slate-500 hover:text-amber-400 dark:hover:text-amber-300 transition-colors"
+                          title={
+                            item.isFavorite ? "Remove from favorites" : "Add to favorites"
+                          }
+                        >
+                          <svg
+                            className={`w-4 h-4 ${
+                              item.isFavorite ? "fill-amber-400 stroke-amber-400" : ""
+                            }`}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                          </svg>
+                        </button>
+
+                        <button
                           onClick={(e) => handleDelete(e, item.id)}
                           className="text-slate-400 dark:text-slate-600 hover:text-rose-500 dark:hover:text-rose-400 transition-colors"
                           title="Delete from history"
@@ -292,6 +343,7 @@ export default function HistoryPanel({ onSelect, refreshKey }: Props) {
                             />
                           </svg>
                         </button>
+
                         <div className="text-slate-400 dark:text-slate-600 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                           <svg
                             className="w-4 h-4"
@@ -318,6 +370,12 @@ export default function HistoryPanel({ onSelect, refreshKey }: Props) {
                   {deletingId === item.id && (
                     <div className="absolute inset-0 rounded-lg bg-slate-900/10 dark:bg-black/30 flex items-center justify-center text-[10px] text-slate-500">
                       Deleting...
+                    </div>
+                  )}
+
+                  {togglingFavoriteId === item.id && (
+                    <div className="absolute inset-x-0 bottom-0 rounded-b-lg bg-slate-900/5 dark:bg-black/20 flex items-center justify-center text-[9px] text-slate-500 py-1">
+                      Updating...
                     </div>
                   )}
                 </div>

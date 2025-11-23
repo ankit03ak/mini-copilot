@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
       prompt,
       code,
       language,
+      isFavorite: false,
       createdAt: new Date().toISOString()
     };
 

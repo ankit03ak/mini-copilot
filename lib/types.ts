@@ -6,4 +6,5 @@ export interface HistoryItem {
   code: string;
   language: Language;
   createdAt: string;
+  isFavorite?: boolean;
 }
